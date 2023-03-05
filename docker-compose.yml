@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  server-a:
+    build: ./A
+    command: bash -c "/usr/local/bin/start.sh && tail -F anything"
+    depends_on:
+      - server-b
+      - server-c
+    container_name: server-a
+
+  server-b:
+    build: ./B
+    container_name: server-b
+
+  server-c:
+    build: ./C
+    container_name: server-c
+  
+  

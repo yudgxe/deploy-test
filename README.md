@@ -1,3 +1,3 @@
 # deploy-test
-make build && make up - для Unix 
-make build ; make up - для Windows
+ * make build && make up - для Unix   
+ * make build ; make up - для Windows

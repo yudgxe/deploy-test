@@ -7,10 +7,7 @@ START=$(date +%s)
 
 echo -e "${Blue}Generating keys for root${NC}"
 
-expect -c "spawn ssh-keygen -f /root/.ssh/id_rsa
-           expect \"*(empty for no passphrase):\" { send \"\r\" }
-           expect \"*?nter same passphrase again:\" { send \"\r\" }
-           expect eof"
+/usr/local/bin/create_key.sh /root/.ssh/id_rsa
 
 expect -c "spawn ssh-copy-id -i /root/.ssh/id_rsa.pub root@server-b
            expect \"*(yes/no*)?*\" { send \"yes\r\" }
@@ -19,11 +16,7 @@ expect -c "spawn ssh-copy-id -i /root/.ssh/id_rsa.pub root@server-b
 
 echo -e "${Blue}Generating keys for devops${NC}"
 
-mkdir -p /home/devops/.ssh
-expect -c "spawn ssh-keygen -f /home/devops/.ssh/id_rsa 
-           expect \"*(empty for no passphrase):\" { send \"\r\" }
-           expect \"*?nter same passphrase again:\" { send \"\r\" }
-           expect eof"
+/usr/local/bin/create_key.sh /home/devops/.ssh/id_rsa
 
 cat /home/devops/.ssh/id_rsa.pub | ssh root@server-b "mkdir -p /home/devops/.ssh && tee -a /home/devops/.ssh/authorized_keys"
 
@@ -37,15 +30,14 @@ ssh root@server-b "useradd -r -d /home/devops -s /bin/bash devops && \
 echo -e "${Blue}Installation and configuration postgres${NC}"
 
 ssh -i /home/devops/.ssh/id_rsa devops@server-b "sudo apt-get install postgresql -y && \
+                                                 sudo sed -i \"s/#listen_addresses = 'localhost'/listen_addresses = '*'/g\" /etc/postgresql/12/main/postgresql.conf && \
+                                                 echo "host  all developer   server-c.deploy-test_default    md5" | sudo tee -a /etc/postgresql/12/main/pg_hba.conf && \
                                                  sudo service postgresql start && \
                                                  sudo -u postgres createdb myapp && \
                                                  sudo -u postgres createdb myauth && \
                                                  sudo -u postgres psql -c \"CREATE ROLE developer WITH LOGIN PASSWORD '1234';\" && \
                                                  sudo -u postgres psql -d myauth -c \"ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO developer;\" && \
-                                                 sudo -u postgres psql -d myapp -c \"ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO developer;\"
-                                                 sudo sed -i \"s/#listen_addresses = 'localhost'/listen_addresses = '*'/g\" /etc/postgresql/12/main/postgresql.conf && \
-                                                 echo "host  all developer   server-c.deploy-test_default    md5" | sudo tee -a /etc/postgresql/12/main/pg_hba.conf && \
-                                                 sudo service postgresql restart"
+                                                 sudo -u postgres psql -d myapp -c \"ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO developer;\""
 
 echo -e "${Blue}Checking the availability of postgres from the c-server ${NC}"
 
@@ -63,8 +55,8 @@ fi
 
 echo -e "${Blue}Blocking ssh access for c-server and b-server${NC}"
 
-ssh root@server-b 'bash -s' < /usr/local/bin/ssh_block.sh
-ssh root@server-c 'bash -s' < /usr/local/bin/ssh_block.sh
+ssh root@server-b 'bash -s' < /usr/local/bin/block_tcp_input.sh ssh server-a.deploy-test_default
+ssh root@server-c 'bash -s' < /usr/local/bin/block_tcp_input.sh ssh server-a.deploy-test_default
 
 END=$(date +%s)
 DIFF=$(( $END - $START ))

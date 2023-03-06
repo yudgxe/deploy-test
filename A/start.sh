@@ -61,7 +61,14 @@ then
     echo -e "${Blue}Successfully${NC}";
 fi
 
+echo -e "${Blue}Blocking ssh access for c-server and b-server${NC}"
+
+ssh root@server-b 'bash -s' < /usr/local/bin/ssh_block.sh
+ssh root@server-c 'bash -s' < /usr/local/bin/ssh_block.sh
+
 END=$(date +%s)
 DIFF=$(( $END - $START ))
 
 echo -e "${Blue}Script runtime: ${DIFF} seconds${NC}"
+
+

@@ -12,9 +12,13 @@ services:
   server-b:
     build: ./B
     container_name: server-b
+    cap_add: 
+      - NET_ADMIN
 
   server-c:
     build: ./C
     container_name: server-c
+    cap_add: 
+      - NET_ADMIN
   
   
